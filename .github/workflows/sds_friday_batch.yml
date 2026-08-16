@@ -1,0 +1,28 @@
+name: Friday SDS Batch Job
+
+on:
+  schedule:
+    - cron: '0 8 * * 5' # 8:00 AM every Friday
+  workflow_dispatch:
+
+jobs:
+  process_sds:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run SDS Batch
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+          PRINTER_EMAIL: ${{ secrets.PRINTER_EMAIL }}
+          SDS_WEBHOOK_URL: ${{ secrets.SDS_WEBHOOK_URL }}
+        run: python src/sds_batch.py

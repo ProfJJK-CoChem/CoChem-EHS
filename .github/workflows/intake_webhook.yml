@@ -1,0 +1,28 @@
+name: Intake Webhook Trigger
+
+on:
+  repository_dispatch:
+    types: [intake_submitted]
+  workflow_dispatch:
+
+jobs:
+  process_intake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Intake Processor
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+          INVENTORY_SHEET_ID: ${{ secrets.INVENTORY_SHEET_ID }}
+        run: python src/intake_processor.py --image_path "${{ github.event.client_payload.image_path || 'dummy.jpg' }}" --submitter_email "${{ github.event.client_payload.submitter_email || 'test@example.com' }}"

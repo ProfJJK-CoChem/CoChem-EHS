@@ -1,0 +1,29 @@
+name: Audit Validator
+
+on:
+  schedule:
+    - cron: '0 9 1,15 * *' # Example cron for semesters
+  repository_dispatch:
+    types: [audit_submitted]
+  workflow_dispatch:
+
+jobs:
+  validate_audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Audit Validator
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+        run: python src/audit_validator.py --image_path "${{ github.event.client_payload.image_path || 'dummy.jpg' }}" --item_type "${{ github.event.client_payload.item_type || 'general' }}"
