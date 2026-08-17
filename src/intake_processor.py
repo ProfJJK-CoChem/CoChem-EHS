@@ -11,8 +11,8 @@ import googleapiclient.http
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def get_flinn_shelf(hazard_class: str) -> str:
-    """Map hazard class to physical shelf deterministically."""
+def get_flinn_shelf(hazard_class: str, image_path: Optional[str] = None) -> str:
+    """Map hazard class to physical shelf deterministically, with Gemini fallback."""
     matrix_path = get_data_dir() / 'flinn_logic_matrix.csv'
     try:
         with open(matrix_path, mode='r') as f:
@@ -23,6 +23,23 @@ def get_flinn_shelf(hazard_class: str) -> str:
     except FileNotFoundError:
         logger.error(f"[MISSING DATA] flinn_logic_matrix.csv not found at {matrix_path}")
         raise
+        
+    if image_path:
+        logger.info(f"Hazard class '{hazard_class}' not found in matrix. Using Gemini Vision for fallback...")
+        try:
+            from utils.gemini_client import deduce_hazard_and_shelf
+            prediction = deduce_hazard_and_shelf(image_path)
+            
+            # Append new prediction to matrix
+            with open(matrix_path, mode='a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([prediction.hazard_class, prediction.flinn_shelf])
+                
+            logger.info(f"Appended new prediction to matrix: {prediction.hazard_class} -> {prediction.flinn_shelf}")
+            return prediction.flinn_shelf
+        except Exception as e:
+            logger.error(f"Fallback prediction failed: {e}")
+            
     return "UNKNOWN (Needs Lab Manager Review)"
 
 def generate_sds_content(chemical_name: str) -> Optional[str]:
@@ -47,7 +64,7 @@ def process_intake(image_path: str, submitter_email: str) -> None:
     
     # We now extract hazard class via Gemini directly from the label
     hazard_class = label_info.hazard_class 
-    shelf = get_flinn_shelf(hazard_class)
+    shelf = get_flinn_shelf(hazard_class, image_path)
     
     logger.info(f"Appending to Inventory. Shelf: {shelf}")
     

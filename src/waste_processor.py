@@ -1,6 +1,6 @@
 import os
 import logging
-from utils.gemini_client import parse_waste_dictation, WasteDictation
+from utils.gemini_client import parse_waste_dictation, WasteDictation, check_compatibility_with_gemini
 from utils.pdf_generator import generate_waste_tag
 from utils.gcp_auth import send_email
 from utils.paths import get_artifacts_dir
@@ -10,10 +10,7 @@ logger = logging.getLogger(__name__)
 
 def check_explosive_incompatibility(data: WasteDictation) -> bool:
     """Check for incompatible waste mixtures that could be explosive."""
-    constituents_str = " ".join([c.name.lower() for c in data.constituents])
-    if "nitric acid" in constituents_str and ("organic" in constituents_str or "ethanol" in constituents_str or "acetone" in constituents_str):
-        return True
-    return False
+    return check_compatibility_with_gemini(data)
 
 def process_waste_dictation(dictation: str) -> None:
     """Process dictated text and generate a Waste Tag."""

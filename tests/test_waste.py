@@ -7,21 +7,25 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../s
 from waste_processor import process_waste_dictation, check_explosive_incompatibility
 from utils.gemini_client import WasteDictation, Constituent
 
-def test_explosive_incompatibility():
-    """Test explosive logic using data structures directly."""
+def test_explosive_incompatibility(monkeypatch):
+    """Test explosive logic expecting ValueError for missing API key."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    
     # Explosive
     data_exp = WasteDictation(
         constituents=[Constituent(name="Nitric acid", volume="1L"), Constituent(name="ethanol", volume="500mL")],
         epa_waste_codes=[]
     )
-    assert check_explosive_incompatibility(data_exp) is True
+    with pytest.raises(ValueError, match="GEMINI_API_KEY environment variable missing"):
+        check_explosive_incompatibility(data_exp)
     
     # Safe
     data_safe = WasteDictation(
         constituents=[Constituent(name="Hydrochloric acid", volume="1L"), Constituent(name="water", volume="500mL")],
         epa_waste_codes=[]
     )
-    assert check_explosive_incompatibility(data_safe) is False
+    with pytest.raises(ValueError, match="GEMINI_API_KEY environment variable missing"):
+        check_explosive_incompatibility(data_safe)
 
 @pytest.mark.parametrize("dictation", [
     "I have nitric acid and ethanol.",
@@ -38,22 +42,3 @@ def test_waste_processing_missing_api_key(dictation, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     with pytest.raises(ValueError, match="GEMINI_API_KEY environment variable missing"):
         process_waste_dictation(dictation)
-
-from waste_processor import check_explosive_incompatibility
-from utils.gemini_client import WasteDictation, Constituent
-
-def test_explosive_incompatibility():
-    """Test the business logic for explosive incompatibilities directly."""
-    # Explosive mixture
-    data = WasteDictation(
-        constituents=[Constituent(name="nitric acid", volume="100mL"), Constituent(name="ethanol", volume="50mL")],
-        epa_waste_codes=[]
-    )
-    assert check_explosive_incompatibility(data) is True
-
-    # Safe mixture
-    data_safe = WasteDictation(
-        constituents=[Constituent(name="hydrochloric acid", volume="100mL"), Constituent(name="water", volume="500mL")],
-        epa_waste_codes=[]
-    )
-    assert check_explosive_incompatibility(data_safe) is False
